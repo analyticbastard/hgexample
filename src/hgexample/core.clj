@@ -39,13 +39,6 @@
         hg-heads (atom {pk (:hash initial-ev)})
         nodes (:nodes config)]
     (a/sub pub pk in-ch)
-    #_(doseq [nodek nodes]
-      (>!! router {:node nodek :data {:events [(-> (@hg pk) first)] :heads {}}}))
-    ;(synchronize @hg [])
-    (go-loop []
-      (Thread/sleep (+ 100 (* (rand-int 4) 1000)))
-      (when (>! new-ch [(str "event from node" pk)])
-        (recur)))
     (go-loop []
       (let [that-pk (rand-nth (remove #(= % pk) nodes))
             [incoming ch] (alts! [in-ch (a/timeout delay-ms)])]
@@ -54,7 +47,9 @@
                      (and (= ch in-ch) incoming)
                      (let [ev-hash (get-in incoming [:data :event :hash])
                            updates (get-in incoming [:data :update])
-                           event (create-event pk (<! new-ch) (@hg-heads pk) ev-hash)]
+                           [tx-payload _] (alts! [new-ch (a/timeout delay-ms)] :default [])
+                           tx-payload (or tx-payload [])
+                           event (create-event pk tx-payload (@hg-heads pk) ev-hash)]
                        (doseq [ev updates]
                          (swap! hg-ev assoc (:hash ev) ev))
                        (doseq [ev updates
@@ -75,7 +70,7 @@
     {:in-ch in-ch
      :new-ch new-ch
      :hg-heads hg-heads
-     :hg-ev hg-heads}))
+     :hg-ev hg-ev}))
 
 (defn -main
   "I don't do a whole lot ... yet."
