@@ -10,11 +10,11 @@
         pub (a/pub c :node)]
     {:router c :pub pub}))
 
-(defn self-parent? [hg-ev
-                    {parent?-hash :hash}
-                    {self-parent :self}]
+(defn self-predecesor? [hg-ev
+                        {parent?-hash :hash}
+                        {self-parent :self}]
   (loop [self-parent-hash self-parent]
-    (or (= parent?-hash self-parent-hash)
+    (or (and parent?-hash self-parent-hash (= parent?-hash self-parent-hash))
         (when self-parent-hash
           (recur (get-in hg-ev [self-parent-hash :self]))))))
 
@@ -41,7 +41,8 @@
     (a/sub pub pk in-ch)
     (go-loop []
       (let [that-pk (rand-nth (remove #(= % pk) nodes))
-            [incoming ch] (alts! [in-ch (a/timeout delay-ms)])]
+            [incoming ch] (alts! [in-ch (a/timeout delay-ms)])
+            this-head (@hg-heads pk)]
         (when-let [event
                    (cond
                      (and (= ch in-ch) incoming)
@@ -49,25 +50,26 @@
                            updates (get-in incoming [:data :update])
                            [tx-payload _] (alts! [new-ch (a/timeout delay-ms)] :default [])
                            tx-payload (or tx-payload [])
-                           event (create-event pk tx-payload (@hg-heads pk) ev-hash)]
+                           event (create-event pk tx-payload this-head ev-hash)]
                        (doseq [ev updates]
                          (swap! hg-ev assoc (:hash ev) ev))
                        (doseq [ev updates
                                :let [nodek (:node ev)]]
-                         (when (self-parent? @hg-ev (@hg-heads nodek) ev)
+                         (when (or (nil? (@hg-heads nodek)) (self-predecesor? @hg-ev (@hg-ev (@hg-heads nodek)) ev))
                            (swap! hg-heads assoc nodek (:hash ev))))
                        (swap! hg-ev assoc (:hash event) event)
                        (swap! hg-heads assoc pk (:hash event))
                        event)
 
                      (not= ch in-ch)
-                     (get @hg-ev (@hg-heads pk))
+                     (get @hg-ev this-head)
 
                      :else nil)]
           (>! router {:node that-pk :data {:event event :update (vals @hg-ev)}})
           (Thread/sleep delay-ms)
           (recur))))
-    {:in-ch in-ch
+    {:pk pk
+     :in-ch in-ch
      :new-ch new-ch
      :hg-heads hg-heads
      :hg-ev hg-ev}))
