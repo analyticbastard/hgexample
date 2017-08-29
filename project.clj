@@ -10,4 +10,7 @@
                  [medley "1.0.0" :exclusions [org.clojure/clojure]]]
   :main ^:skip-aot hgexample.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]]
+                   :source-paths ["dev"]
+                   :main user}
+             :uberjar {:aot :all}})
