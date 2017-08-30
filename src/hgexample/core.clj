@@ -2,7 +2,8 @@
   (:require
     [clojure.core.async :as a :refer [go-loop >!! <!! >! <! alts! alts!!]]
     [clojure.tools.logging :refer [warn info error]]
-    [medley.core :as medley])
+    [medley.core :as medley]
+    [clojure.set :as set])
   (:import (java.util UUID)))
 
 (defn create-router []
@@ -18,13 +19,41 @@
         (when self-parent-hash
           (recur (get-in hg-ev [self-parent-hash :self]))))))
 
-(defn create-event [pk payload & [self other]]
+(defn create-event [pk payload & [self other witness?]]
   (merge
-    (when self {:self self})
-    (when other {:other other})
+    (when witness?
+      {:witness true})
+    (when (and self other)
+      {:self self
+       :other other})
     {:hash  (UUID/randomUUID)
      :node  pk
+     :round 1
      :tx    payload}))
+
+(defn can-see [hg-ev current-round {:keys [self other witness round node] :as event}]
+  (if (or (nil? self) (and witness (= current-round round)))
+    #{node}
+    (let [self-parent (hg-ev self)
+          other-parent (hg-ev other)
+          {round-self :round witness-self :witness} self-parent
+          {round-other :round witness-other :witness} other-parent]
+      (set/union
+        (when (= current-round round-self)
+          (can-see hg-ev current-round self-parent))
+        (when (= current-round round-other)
+          (can-see hg-ev current-round other-parent))))))
+
+(defn divide-rounds [hg-ev num-nodes {:keys [self other] :as event}]
+  (let [{round-self :round} (hg-ev self)
+        {round-other :round} (hg-ev other)
+        current-round (max (or round-self 1) (or round-other 1))
+        majority-set (can-see hg-ev current-round event)
+        round (if (> (count majority-set)
+                     (-> num-nodes (* 2) (/ 3) (Math/ceil) int))
+                (inc current-round)
+                current-round)]
+    (assoc event :round round :witness (> round round-self))))
 
 (defn create-node [config]
   (let [pk (:pk config)
@@ -50,7 +79,7 @@
                            updates (get-in incoming [:data :update])
                            [tx-payload _] (alts! [new-ch (a/timeout delay-ms)] :default [])
                            tx-payload (or tx-payload [])
-                           event (create-event pk tx-payload this-head ev-hash)]
+                           event (divide-rounds @hg-ev (count nodes) (create-event pk tx-payload this-head ev-hash))]
                        (doseq [ev updates]
                          (swap! hg-ev assoc (:hash ev) ev))
                        (doseq [ev updates
