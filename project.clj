@@ -9,8 +9,11 @@
                  [prismatic/schema "1.1.3" :exclusions [org.clojure/clojure]]
                  [medley "1.0.0" :exclusions [org.clojure/clojure]]]
   :main ^:skip-aot hgexample.core
+  :source-paths ["src/clj"]
+  :java-source-paths ["src/java"]
   :target-path "target/%s"
-  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]]
-                   :source-paths ["dev"]
-                   :main user}
+  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
+                                  [org.clojure/tools.nrepl "0.2.11" :exclusions [org.clojure/clojure]]]
+                   :source-paths ["dev/src"]
+                   :main ^:skip-aot user}
              :uberjar {:aot :all}})
