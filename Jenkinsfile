@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('test') {
       steps {
-        sh 'lein test'
+        sh 'curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > /usr/bin'
       }
     }
   }
