@@ -2,7 +2,7 @@
   (:require
     [hgexample
      [event :as event]
-     [hg :refer [get-event-by-id insert count-participants]]]))
+     [hg :refer [get-event-by-id insert count-participants get-witnesses-by-round]]]))
 
 (def dispatch-name (ns-name *ns*))
 
@@ -19,6 +19,13 @@
 (defmethod count-participants dispatch-name
   [hg]
   (-> hg :heads count))
+
+(defmethod get-witnesses-by-round dispatch-name
+  [hg round]
+  (->> hg :events vals
+       (filter event/witness?)
+       (filter #(= round (:round %)))
+       (map event/get-id)))
 
 (defn new-hg []
   (with-meta {:heads {}

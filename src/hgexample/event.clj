@@ -10,14 +10,23 @@
 (defn get-participant [event]
   (:participant event))
 
+(defn get-round [event]
+  (:round event))
+
+(defn witness? [event]
+  (:witness? event))
+
 (defn create-event
   ([participant]
-   {:id          (UUID/randomUUID)
-    :participant participant
-    :parents     {:self  nil
-                  :other nil}})
-  ([{participant :participant self-parent-id :id} {other-parent-id :id}]
-   {:id          (UUID/randomUUID)
-    :participant participant
-    :parents     {:self  self-parent-id
-                  :other other-parent-id}}))
+   (create-event {:participant participant} nil))
+  ([{participant :participant self-parent-id :id self-parent-round :round}
+    {other-parent-id :id other-parent-round :round}]
+   (let [self-parent-round (or self-parent-round 1)
+         other-parent-round (or other-parent-round 1)
+         round (max self-parent-round other-parent-round)]
+     (merge {:id          (UUID/randomUUID)
+             :round round
+             :participant participant
+             :parents     {:self  self-parent-id
+                           :other other-parent-id}}
+            (when (nil? self-parent-id) {:witness? true})))))

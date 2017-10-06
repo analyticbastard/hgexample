@@ -29,9 +29,8 @@
         D-r2-1 (swap-id (event/create-event witness-r2-D witness-r2-B) 18)
         A-r2-2 (swap-id (event/create-event A-r2-1 witness-r2-B) 19)
         B-r2-1 (swap-id (event/create-event witness-r2-B A-r2-2) 20)
-        B-r2-1 (swap-id (event/create-event witness-r2-B A-r2-2) 21)
         D-r2-2 (swap-id (event/create-event D-r2-1 A-r2-2) 22)
-        witness-r3-B (swap-id (event/create-event A-r2-2 D-r2-1) 23)
+        witness-r3-B (swap-id (event/create-event B-r2-1 D-r2-1) 23)
         witness-r3-A (swap-id (event/create-event A-r2-2 witness-r3-B) 24)
         witness-r3-D (swap-id (event/create-event D-r2-2 witness-r3-B) 25)
         D-r3-1 (swap-id (event/create-event witness-r3-D witness-r2-C) 26)
@@ -120,7 +119,7 @@
       (is (vote-for? hg participant-1-ev-2 (event/get-id participant-2-ev-1))))))
 
 (deftest strongly-see-test
-  (testing "Strongly see test"
+  (testing "Strongly see simple test"
     (let [participant-1-ev-1 (event/create-event 1)
           participant-2-ev-1 (event/create-event 2)
           participant-3-ev-1 (event/create-event 3)
@@ -147,4 +146,30 @@
       (is (strongly-see? hg participant-3-ev-2 (event/get-id participant-2-ev-1)))
       (is (strongly-see? hg participant-3-ev-2 (event/get-id participant-1-ev-1)))
       (is (not (strongly-see? hg participant-4-ev-2 (event/get-id participant-1-ev-1))))
-      (is (strongly-see? hg participant-4-ev-3 (event/get-id participant-2-ev-1))))))
+      (is (strongly-see? hg participant-4-ev-3 (event/get-id participant-2-ev-1)))))
+
+  (let [hg (create-canonical-graph)]
+
+    (testing "Strongly see test with canonical Hashgraph witness B4 sees witnesses in round 3"
+      (is (strongly-see? hg (-> hg :events (get 36)) 23))
+      (is (strongly-see? hg (-> hg :events (get 36)) 24))
+      (is (strongly-see? hg (-> hg :events (get 36)) 25))
+      (is (strongly-see? hg (-> hg :events (get 36)) 27)))
+
+    (testing "Strongly see test with canonical Hashgraph witness D4 sees witnesses in round 3"
+      (is (strongly-see? hg (-> hg :events (get 36)) 23))
+      (is (strongly-see? hg (-> hg :events (get 36)) 24))
+      (is (strongly-see? hg (-> hg :events (get 36)) 25))
+      (is (strongly-see? hg (-> hg :events (get 36)) 27)))
+
+    (testing "Strongly see test with canonical Hashgraph A1"
+      (is (not (strongly-see? hg (-> hg :events (get 7)) 1)))
+      (is (strongly-see? hg (-> hg :events (get 7)) 2))
+      (is (not (strongly-see? hg (-> hg :events (get 7)) 3)))
+      (is (strongly-see? hg (-> hg :events (get 7)) 4)))
+
+    (testing "Strongly see test with canonical Hashgraph A13 strongly see R1 witnesses"
+      (is (not (strongly-see? hg (-> hg :events (get 12)) 1)))
+      (is (not (strongly-see? hg (-> hg :events (get 12)) 2)))
+      (is (strongly-see? hg (-> hg :events (get 12)) 3))
+      (is (not (strongly-see? hg (-> hg :events (get 12)) 4))))))
