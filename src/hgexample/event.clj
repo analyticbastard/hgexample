@@ -16,6 +16,9 @@
 (defn witness? [event]
   (:witness? event))
 
+(defn get-votes [event]
+  (:voted-by event))
+
 (defn create-event
   ([participant]
    (create-event {:participant participant} nil))
@@ -25,8 +28,12 @@
          other-parent-round (or other-parent-round 1)
          round (max self-parent-round other-parent-round)]
      (merge {:id          (UUID/randomUUID)
-             :round round
+             :round       round
              :participant participant
              :parents     {:self  self-parent-id
-                           :other other-parent-id}}
+                           :other other-parent-id}
+             :voted-by    #{}}
             (when (nil? self-parent-id) {:witness? true})))))
+
+(defn vote-for-ancestor [child parent]
+  (update parent :voted-by conj (:id child)))

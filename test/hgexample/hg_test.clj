@@ -57,9 +57,9 @@
           participant-1-ev-2 (event/create-event participant-1-ev-1 participant-2-ev-1)
           new-hg (mem-hg/new-hg)
           hg (-> new-hg
-    (insert participant-1-ev-1)
-    (insert participant-2-ev-1)
-    (insert participant-1-ev-2))]
+                 (insert participant-1-ev-1)
+                 (insert participant-2-ev-1)
+                 (insert participant-1-ev-2))]
       (is (direct-parent? participant-1-ev-2 (event/get-id participant-1-ev-1)))
       (is (direct-parent? participant-1-ev-2 (event/get-id participant-2-ev-1))))))
 
@@ -173,3 +173,51 @@
       (is (not (strongly-see? hg (-> hg :events (get 12)) 2)))
       (is (strongly-see? hg (-> hg :events (get 12)) 3))
       (is (not (strongly-see? hg (-> hg :events (get 12)) 4))))))
+
+(deftest vote-test
+  (testing "Voting test"
+    (let [canonical-hg (create-canonical-graph)
+          hg* (reduce #(vote %1 %2 15)
+                      canonical-hg
+                      (map (partial get-event-by-id canonical-hg) [23 24 25 27]))
+          hg (reduce #(vote %1 %2 17)
+                     hg*
+                     (map (partial get-event-by-id canonical-hg) [23 24 25 27]))]
+      (is (= #{23 24 25 27} (event/get-votes (get-event-by-id hg 15))))
+      (is (= #{27} (event/get-votes (get-event-by-id hg 17)))))))
+
+(deftest collect-votes-test
+  (testing "Collect votes test"
+    (let [canonical-hg (create-canonical-graph)
+          hg*** (reduce #(vote %1 %2 13)
+                        canonical-hg
+                        (map (partial get-event-by-id canonical-hg) [23 24 25 27]))
+          hg** (reduce #(vote %1 %2 14)
+                       hg***
+                       (map (partial get-event-by-id canonical-hg) [23 24 25 27]))
+          hg* (reduce #(vote %1 %2 15)
+                      hg**
+                      (map (partial get-event-by-id canonical-hg) [23 24 25 27]))
+          hg (reduce #(vote %1 %2 17)
+                     hg*
+                     (map (partial get-event-by-id canonical-hg) [23 24 25 27]))
+          events-voting-for-witness-D-r2 (event/get-votes (get-event-by-id hg 13))
+          events-voting-for-witness-A-r2 (event/get-votes (get-event-by-id hg 14))
+          events-voting-for-witness-B-r2 (event/get-votes (get-event-by-id hg 15))
+          events-voting-for-witness-C-r2 (event/get-votes (get-event-by-id hg 17))]
+      (testing "B4 and D4 collect all votes from round 3 for D2"
+        (is (= 4 (count events-voting-for-witness-D-r2)))
+        (is (= events-voting-for-witness-D-r2 (collect-votes hg (get-event-by-id hg 35) events-voting-for-witness-D-r2)))
+        (is (= events-voting-for-witness-D-r2 (collect-votes hg (get-event-by-id hg 36) events-voting-for-witness-D-r2))))
+      (testing "B4 and D4 collect all votes from round 3 for A2"
+        (is (= 4 (count events-voting-for-witness-A-r2)))
+        (is (= events-voting-for-witness-A-r2 (collect-votes hg (get-event-by-id hg 35) events-voting-for-witness-A-r2)))
+        (is (= events-voting-for-witness-A-r2 (collect-votes hg (get-event-by-id hg 36) events-voting-for-witness-A-r2))))
+      (testing "B4 and D4 collect all votes from round 3 for B2"
+        (is (= 4 (count events-voting-for-witness-B-r2)))
+        (is (= events-voting-for-witness-B-r2 (collect-votes hg (get-event-by-id hg 35) events-voting-for-witness-B-r2)))
+        (is (= events-voting-for-witness-B-r2 (collect-votes hg (get-event-by-id hg 36) events-voting-for-witness-B-r2))))
+      (testing "B4 and D4 collect just one vote for C2"
+        (is (= 1 (count events-voting-for-witness-C-r2)))
+        (is (= events-voting-for-witness-C-r2 (collect-votes hg (get-event-by-id hg 35) events-voting-for-witness-C-r2)))
+        (is (= events-voting-for-witness-C-r2 (collect-votes hg (get-event-by-id hg 36) events-voting-for-witness-C-r2)))))))

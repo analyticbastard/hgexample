@@ -1,7 +1,6 @@
 (ns hgexample.hg
   (:require
-    [hgexample.event :refer :all]
-    [hgexample.event :as event]
+    [hgexample.event :as event :refer :all]
     [clojure.set :as set]))
 
 (def dispatch-by-hg-meta-type (fn [hg & _] (-> hg meta :type)))
@@ -13,6 +12,10 @@
 (defmulti count-participants dispatch-by-hg-meta-type)
 
 (defmulti get-witnesses-by-round dispatch-by-hg-meta-type)
+
+(defmulti vote dispatch-by-hg-meta-type)
+
+(defmulti collect-votes dispatch-by-hg-meta-type)
 
 (defn direct-parent? [child possible-parent-id]
   ((set (get-parents child)) possible-parent-id))

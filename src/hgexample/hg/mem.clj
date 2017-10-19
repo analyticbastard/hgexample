@@ -2,7 +2,8 @@
   (:require
     [hgexample
      [event :as event]
-     [hg :refer [get-event-by-id insert count-participants get-witnesses-by-round]]]))
+     [hg :as hg :refer [get-event-by-id insert count-participants get-witnesses-by-round
+                        vote collect-votes]]]))
 
 (def dispatch-name (ns-name *ns*))
 
@@ -26,6 +27,17 @@
        (filter event/witness?)
        (filter #(= round (:round %)))
        (map event/get-id)))
+
+(defmethod vote dispatch-name
+  [hg child possible-parent-id]
+  (let [parent (get-event-by-id hg possible-parent-id)]
+    (if (hg/ancestor? hg child possible-parent-id)
+      (insert hg (event/vote-for-ancestor child parent))
+      hg)))
+
+(defmethod collect-votes dispatch-name
+  [hg child possible-parent-ids]
+  (set (filter (partial hg/strongly-see? hg child) possible-parent-ids)))
 
 (defn new-hg []
   (with-meta {:heads {}
