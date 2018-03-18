@@ -4,7 +4,7 @@
             [clojure.tools.logging :refer [warn info error]]
             [hgexample.core :refer :all]))
 
-(deftest hg-test
+#_(deftest hg-test
   (testing "Hashgraph test"
     (let [router (create-router)
           config-1 (merge router {:pk 1 :sk 1 :nodes [2 3 4]})
