@@ -37,3 +37,6 @@
 
 (defn vote-for-ancestor [child parent]
   (update parent :voted-by conj (:id child)))
+
+(defn make-witness [event]
+  (assoc event :witness? true))

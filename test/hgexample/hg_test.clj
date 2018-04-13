@@ -221,3 +221,11 @@
         (is (= 1 (count events-voting-for-witness-C-r2)))
         (is (= events-voting-for-witness-C-r2 (collect-votes hg (get-event-by-id hg 35) events-voting-for-witness-C-r2)))
         (is (= events-voting-for-witness-C-r2 (collect-votes hg (get-event-by-id hg 36) events-voting-for-witness-C-r2)))))))
+
+(deftest hg-from-test
+  (testing "Graph cut from head event to specific events"
+    (let [hg* (create-canonical-graph)
+          events (:events hg*)
+          events-2 (reduce #(dissoc %1 %2) events (range 16 (count events)))
+          hg-2 (assoc hg* :events events-2)]
+      (println (hg-from hg-2 #{13 15 16} #{5 8 10})))))

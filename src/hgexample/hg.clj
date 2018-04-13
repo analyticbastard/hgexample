@@ -69,15 +69,14 @@
         all-events-in-paths (search-in-path #{child-in-participant} [child-id])]
     (supermajority? total-participants (count all-events-in-paths))))
 
-(defn hg-from [hg ancestor]
-  (let [ancestor-id (get-id ancestor)
-        ancestor-in-participant (get-participant ancestor)
-        total-participants (count-participants hg)
-        participant-head (-> hg :heads (get ancestor-in-participant))
-        search-in-path (fn ! [events-visited current-event-id]
-                         (let [current-event (get-event-by-id hg current-event-id)
-                               participant-in-current-event (get-participant current-event)
-                               [self other] (get-parents (get-event-by-id hg current-event-id))]
-                           (or (= ancestor-id current-event-id)
-                               (when other (! other)))))]
-    (search-in-path #{} ancestor-id)))
+(defn hg-from [hg from-ids ancestors-ids]
+  (loop [events-visited (set ancestors-ids)
+         events-to-visit (remove (set ancestors-ids) from-ids)]
+    (let [current-event-id (first events-to-visit)
+          current-event (get-event-by-id hg current-event-id)
+          parents (remove nil? (get-parents current-event))
+          not-visited-yet (concat (rest events-to-visit)
+                                  (remove (set events-visited) parents))]
+      (if-not (seq not-visited-yet)
+        (remove (set ancestors-ids) events-visited) ;(map get-event-by-id events-visited)
+        (recur (conj events-visited current-event-id) not-visited-yet)))))

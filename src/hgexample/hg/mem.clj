@@ -25,7 +25,7 @@
   [hg round]
   (->> hg :events vals
        (filter event/witness?)
-       (filter #(= round (:round %)))
+       (filter #(= round (event/get-round %)))
        (map event/get-id)))
 
 (defmethod vote dispatch-name
